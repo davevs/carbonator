@@ -57,7 +57,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IScannerListener):
 	self._callbacks.excludeFromScope(self.url)
 
 	print "Generating Report"
-	self.generateReport('HTML')
+	self.generateReport(self.format)
 	print "Report Generated"
 	print "Closing Burp in", self.packet_timeout, "seconds."
 	time.sleep(self.packet_timeout)
@@ -84,8 +84,7 @@ class BurpExtender(IBurpExtender, IHttpListener, IScannerListener):
 	return
 
     def generateReport(self, format):
-	if format != 'XML':
-		format = 'HTML'	
+	format = self.format
 
 	file_name = 'IntegrisSecurity_Carbonator_'+self.scheme+'_'+self.fqdn+'_'+str(self.port)+'.'+format.lower()
 	self._callbacks.generateScanReport(format,self.scanner_results,File(file_name))
@@ -95,8 +94,10 @@ class BurpExtender(IBurpExtender, IHttpListener, IScannerListener):
 
     def processCLI(self):
 	cli = self._callbacks.getCommandLineArguments()
-	if len(cli) < 0:
+	if len(cli) < 5:
 		print "Incomplete target information provided."
+		print "cli format is: scheme fqcdn port path report_format"
+		print "example: http www.example.org 80 / HTML"
 		return False
 	elif not cli:
 		print "Integris Security Carbonator is now loaded."
@@ -104,20 +105,14 @@ class BurpExtender(IBurpExtender, IHttpListener, IScannerListener):
 		print "For questions or feature requests contact us at carbonator at integris security dot com."
 		print "Visit carbonator at https://www.integrissecurity.com/Carbonator"
 		return False
-	elif cli[0] == 'https' or cli[0] == 'http': #cli[0]=scheme,cli[1]=fqdn,cli[2]=port
+	elif cli[0] == 'https' or cli[0] == 'http': #cli[0]=scheme,cli[1]=fqdn,cli[2]=port,cli[3]=path,cli[4]=report_format
 		self.scheme = cli[0]
 		self.fqdn = cli[1]
 		self.port = int(cli[2])
-		if len(cli) == 3:
-			self.path = '/'
-		elif len(cli) >= 4:
-			self.path = cli[3]
-		else:
-			print "Unknown number of CLI arguments"
-			return False
+		self.path = cli[3]
+		self.format = cli[4]
 		self.url = URL(self.scheme,self.fqdn,self.port,self.path)
 	else:
 		print "Invalid command line arguments supplied"
-		print cli[0], cli[1], cli[2], cli[3]
 		return False
 	return True
